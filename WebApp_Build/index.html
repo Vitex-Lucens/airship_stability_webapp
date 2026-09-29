@@ -1,0 +1,1360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Airship Design Tool</title>
+<style>
+:root {
+  --bg:        #091a24;
+  --panel:     #0c2231;
+  --card:      #0f2a3c;
+  --border:    #1a3a4f;
+  --accent:    #7cc4d4;
+  --accent2:   #5abf8a;
+  --danger:    #e06050;
+  --warn:      #c9a84c;
+  --text:      #b8d4e3;
+  --text-dim:  #5a8a9e;
+  --text-bright: #dceef6;
+  --input-bg:  #071820;
+  --slider-track: #163040;
+  --slider-thumb: #7cc4d4;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; }
+body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; background: var(--bg); color: var(--text); font-size: 13px; }
+
+/* ── Header ── */
+.header { display: flex; align-items: center; justify-content: space-between; padding: 8px 24px; border-bottom: 1px solid var(--border); background: var(--panel); height: 44px; }
+.header-brand { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.header-logo { width: 28px; height: 28px; object-fit: contain; flex: none; opacity: 0.92; }
+.view-logo { position: absolute; right: 22px; bottom: 4px; width: 153px; height: 153px; object-fit: contain; opacity: 0.58; pointer-events: none; z-index: 2; }
+.header h1 { font-size: 13px; font-weight: 500; color: var(--text-bright); letter-spacing: 1.6px; text-transform: uppercase; white-space: nowrap; }
+.header h1 span { color: var(--accent); font-weight: 600; }
+.header-status { display: flex; gap: 18px; align-items: center; font-size: 11px; letter-spacing: 0.3px; }
+.status-pill { padding: 2px 10px; border-radius: 2px; font-weight: 600; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; }
+.status-floats { background: rgba(90,191,138,0.12); color: var(--accent2); border: 1px solid rgba(90,191,138,0.25); }
+.status-sinks { background: rgba(224,96,80,0.12); color: var(--danger); border: 1px solid rgba(224,96,80,0.25); }
+.status-val { color: var(--text-dim); }
+.status-val b { color: var(--text-bright); font-variant-numeric: tabular-nums; }
+
+/* ── Layout ── */
+.app { display: flex; height: calc(100vh - 44px); }
+
+/* ── Left sidebar ── */
+.sidebar { width: 280px; min-width: 280px; overflow-y: auto; background: var(--panel); border-right: 1px solid var(--border); padding: 0; }
+.sidebar::-webkit-scrollbar { width: 5px; }
+.sidebar::-webkit-scrollbar-track { background: transparent; }
+.sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+.section { border-bottom: 1px solid var(--border); }
+.section-header { display: flex; align-items: center; gap: 8px; padding: 12px 16px 6px; cursor: pointer; user-select: none; }
+.section-header h2 { font-size: 10px; font-weight: 500; text-transform: uppercase; letter-spacing: 1.4px; color: var(--text-dim); }
+.section-header .dot { width: 3px; height: 12px; border-radius: 1px; }
+.dot-hull { background: var(--accent); }
+.dot-atmo { background: var(--accent2); }
+.dot-fins { background: #8cb4c8; }
+.dot-bal  { background: var(--warn); }
+
+.section-body { padding: 4px 16px 12px; }
+
+.param { margin: 7px 0; }
+.param-hint { font-size: 9px; color: var(--text-dim); margin-top: 3px; line-height: 1.3; letter-spacing: 0.2px; }
+.param-top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 3px; }
+.param-label { font-size: 11px; color: var(--text); letter-spacing: 0.2px; }
+.param-val { font-size: 11px; font-weight: 600; color: var(--accent); font-variant-numeric: tabular-nums; min-width: 56px; text-align: right; }
+.param-unit { font-size: 9px; color: var(--text-dim); margin-left: 2px; letter-spacing: 0.3px; }
+
+/* Sliders */
+input[type=range] { -webkit-appearance: none; appearance: none; width: 100%; height: 3px; border-radius: 1px; background: var(--slider-track); outline: none; }
+input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 12px; height: 12px; border-radius: 50%; background: var(--slider-thumb); cursor: pointer; border: 2px solid var(--bg); box-shadow: 0 0 6px rgba(124,196,212,0.3); }
+input[type=range]::-moz-range-thumb { width: 12px; height: 12px; border-radius: 50%; background: var(--slider-thumb); cursor: pointer; border: 2px solid var(--bg); }
+input[type=range]:hover::-webkit-slider-thumb { box-shadow: 0 0 10px rgba(124,196,212,0.5); }
+
+/* Selects */
+.param select { width: 100%; background: var(--input-bg); border: 1px solid var(--border); color: var(--text); padding: 4px 8px; border-radius: 2px; font-size: 11px; cursor: pointer; letter-spacing: 0.2px; }
+.param select:focus { border-color: var(--accent); outline: none; }
+
+/* ── Main content ── */
+.main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+/* View toolbar */
+.view-toolbar { display: flex; align-items: center; gap: 2px; padding: 4px 14px; background: var(--panel); border-bottom: 1px solid var(--border); height: 32px; }
+.view-btn { padding: 3px 14px; font-size: 10px; font-weight: 500; color: var(--text-dim); background: transparent; border: 1px solid transparent; border-radius: 2px; cursor: pointer; transition: all 0.15s; text-transform: uppercase; letter-spacing: 0.8px; }
+.view-btn:hover { color: var(--text); background: var(--card); }
+.view-btn.active { color: var(--accent); background: rgba(124,196,212,0.08); border-color: rgba(124,196,212,0.2); }
+
+/* Canvas panels */
+.views { display: flex; flex: 1; min-height: 0; position: relative; }
+.view-panel { position: relative; overflow: hidden; border-right: 1px solid var(--border); }
+.view-panel:last-child { border-right: none; }
+.view-panel canvas { display: block; width: 100%; height: 100%; }
+.view-label { position: absolute; top: 8px; left: 14px; font-size: 9px; font-weight: 500; color: var(--accent); text-transform: uppercase; letter-spacing: 1.2px; pointer-events: none; opacity: 0.5; }
+
+/* View modes */
+.views.mode-engineering .panel-eng { display: block; flex: 1; }
+.views.mode-engineering .panel-3d { display: none !important; }
+.views.mode-engineering .panel-aero { display: none !important; }
+.views.mode-3d .panel-eng { display: none !important; }
+.views.mode-3d .panel-3d { display: block !important; flex: 1; }
+.views.mode-3d .panel-aero { display: none !important; }
+.views.mode-aero .panel-eng { display: none !important; }
+.views.mode-aero .panel-3d { display: none !important; }
+.views.mode-aero .panel-aero { display: block !important; flex: 1; }
+.views.mode-aero .panel-docs { display: none !important; }
+.views.mode-engineering .panel-docs { display: none !important; }
+.views.mode-3d .panel-docs { display: none !important; }
+.views.mode-docs .panel-eng { display: none !important; }
+.views.mode-docs .panel-3d { display: none !important; }
+.views.mode-docs .panel-aero { display: none !important; }
+.views.mode-docs .panel-docs { display: block !important; flex: 1; }
+
+/* Docs panel */
+.docs-content { padding: 28px 36px; overflow-y: auto; height: 100%; color: var(--text); font-size: 13px; line-height: 1.7; max-width: 900px; margin: 0 auto; }
+.docs-content h2 { font-size: 12px; font-weight: 500; text-transform: uppercase; letter-spacing: 1.4px; color: var(--accent); margin: 28px 0 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+.docs-content h2:first-child { margin-top: 0; }
+.docs-content h3 { font-size: 11px; font-weight: 600; color: var(--text-bright); margin: 16px 0 6px; letter-spacing: 0.3px; }
+.docs-content p { margin: 6px 0; color: var(--text); }
+.docs-content code { background: var(--card); padding: 1px 5px; border-radius: 2px; font-size: 12px; color: var(--accent); }
+.docs-content ul { margin: 6px 0 6px 20px; }
+.docs-content li { margin: 3px 0; }
+@media (max-width: 600px) {
+  .docs-content { padding: 18px 16px; font-size: 12px; line-height: 1.65; }
+  .docs-content h2 { font-size: 11px; letter-spacing: 1px; margin: 22px 0 8px; }
+  .docs-content h3 { font-size: 10px; margin: 14px 0 5px; }
+  .docs-content code { font-size: 11px; }
+}
+
+/* Data strip */
+.data-strip { display: grid; grid-template-columns: repeat(5, 1fr); border-top: 1px solid var(--border); background: var(--panel); min-height: 220px; max-height: 280px; }
+.data-col { padding: 12px 16px; border-right: 1px solid var(--border); overflow-y: auto; }
+.data-col:last-child { border-right: none; }
+.data-col::-webkit-scrollbar { width: 4px; }
+.data-col::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+.data-col h3 { font-size: 9px; font-weight: 500; text-transform: uppercase; letter-spacing: 1.2px; color: var(--text-dim); margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+.data-row-item { display: flex; justify-content: space-between; align-items: baseline; padding: 3px 0; font-size: 11px; line-height: 1.5; }
+.data-row-item .dl { color: var(--text-dim); white-space: nowrap; margin-right: 8px; }
+.data-row-item .dv { font-variant-numeric: tabular-nums; color: var(--text-bright); font-weight: 500; white-space: nowrap; text-align: right; }
+.data-row-item .dv.positive { color: var(--accent2); }
+.data-row-item .dv.negative { color: var(--danger); }
+.data-row-item .dv.accent { color: var(--accent); }
+.data-row-item .dv.warn { color: var(--warn); }
+.data-divider { height: 1px; background: var(--border); margin: 6px 0; }
+
+/* Aero toolbar */
+.aero-toolbar { display: none; align-items: center; gap: 10px; padding: 6px 16px; background: var(--panel); border-bottom: 1px solid var(--border); height: 36px; font-size: 11px; }
+.aero-toolbar.visible { display: flex; }
+.aero-toolbar label { color: var(--text-dim); white-space: nowrap; font-size: 10px; font-weight: 500; letter-spacing: 0.3px; }
+.aero-toolbar input[type=range] { width: 140px; }
+.aero-toolbar .aero-val { color: var(--accent); font-weight: 600; min-width: 32px; text-align: right; font-variant-numeric: tabular-nums; font-size: 11px; }
+.aero-toolbar .aero-unit { color: var(--text-dim); font-size: 9px; margin-left: 1px; }
+.aero-sep { width: 1px; height: 16px; background: var(--border); margin: 0 2px; }
+.sim-btn { padding: 4px 18px; background: transparent; color: var(--accent); border: 1px solid var(--accent); border-radius: 2px; font-size: 10px; font-weight: 600; cursor: pointer; letter-spacing: 1px; text-transform: uppercase; transition: all 0.15s; }
+.sim-btn:hover { background: rgba(124,196,212,0.12); }
+.sim-btn:active { background: rgba(124,196,212,0.2); }
+.sim-status { color: var(--text-dim); font-size: 10px; letter-spacing: 0.2px; }
+
+/* ── Mobile sidebar toggle ── */
+.sidebar-toggle { display: none; background: none; border: none; color: var(--text); font-size: 20px; cursor: pointer; padding: 0 8px; line-height: 1; }
+
+/* ── Responsive: tablets and small screens ── */
+@media (max-width: 900px) {
+  .header { padding: 6px 12px; height: 40px; }
+  .header-logo { width: 24px; height: 24px; }
+  .view-logo { width: 122px; height: 122px; right: 22px; bottom: 4px; }
+  .header h1 { font-size: 11px; letter-spacing: 1px; }
+  .header-status { gap: 8px; font-size: 10px; }
+  .header-status .status-val { display: none; }
+  .sidebar-toggle { display: block; }
+  .sidebar { position: fixed; left: -280px; top: 40px; bottom: 0; z-index: 100; transition: left 0.25s ease; box-shadow: 4px 0 20px rgba(0,0,0,0.5); }
+  .sidebar.open { left: 0; }
+  .sidebar-overlay { display: none; position: fixed; inset: 0; top: 40px; z-index: 99; background: rgba(0,0,0,0.4); }
+  .sidebar-overlay.visible { display: block; }
+  .app { height: calc(100vh - 40px); }
+  .data-strip { grid-template-columns: repeat(2, 1fr); min-height: 120px; max-height: 160px; overflow-y: auto; }
+  .data-col:nth-child(odd):last-child { grid-column: span 2; }
+  .data-col { padding: 8px 10px; }
+  .data-col h3 { font-size: 8px; margin-bottom: 4px; padding-bottom: 4px; }
+  .data-row-item { font-size: 10px; padding: 2px 0; }
+  .view-toolbar { height: 28px; }
+  .view-btn { font-size: 9px; padding: 2px 8px; }
+  .views { flex: 1; min-height: 0; }
+  .aero-toolbar { flex-wrap: wrap; height: auto; min-height: 36px; padding: 4px 10px; gap: 6px; }
+  .aero-toolbar input[type=range] { width: 100px; }
+  .aero-sep { display: none; }
+}
+
+/* ── Responsive: phones ── */
+@media (max-width: 600px) {
+  .header { height: 36px; padding: 4px 10px; }
+  .header-logo { width: 22px; height: 22px; }
+  .view-logo { width: 101px; height: 101px; right: 17px; bottom: 3px; }
+  .header h1 { font-size: 10px; letter-spacing: 0.8px; }
+  .header-status { gap: 4px; }
+  .header-status .status-val { display: none; }
+  .sidebar-toggle { font-size: 18px; }
+  .app { flex-direction: column; height: auto; min-height: calc(100vh - 36px); overflow-y: auto; }
+  .sidebar { top: 36px; }
+  .sidebar-overlay { top: 36px; }
+  .main { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+  .views { min-height: 55vw; max-height: 50vh; flex: none; }
+  .view-panel { min-height: 55vw; }
+  .view-panel canvas { min-height: 55vw; }
+  .view-toolbar { height: 26px; }
+  .view-btn { font-size: 8px; padding: 2px 6px; letter-spacing: 0.5px; }
+  .data-strip { grid-template-columns: repeat(2, 1fr); min-height: auto; max-height: none; overflow-y: visible; }
+  .data-col { border-right: none; padding: 6px 8px; }
+  .data-col:nth-child(even) { border-left: 1px solid var(--border); }
+  .data-col { border-bottom: 1px solid var(--border); }
+  .data-col h3 { font-size: 8px; letter-spacing: 0.8px; margin-bottom: 4px; padding-bottom: 3px; }
+  .data-row-item { font-size: 10px; padding: 1px 0; line-height: 1.4; }
+  .data-row-item .dl { font-size: 9px; }
+  .data-row-item .dv { font-size: 10px; }
+  .aero-toolbar { padding: 4px 8px; gap: 4px; min-height: 32px; }
+  .aero-toolbar label { font-size: 9px; }
+  .aero-toolbar input[type=range] { width: 70px; }
+  .aero-toolbar .aero-val { font-size: 10px; min-width: 24px; }
+  .sim-btn { padding: 3px 12px; font-size: 9px; }
+  .view-label { font-size: 8px; top: 4px; left: 8px; }
+}
+
+/* Hide data strip on mobile for 3D and Aero — let plots use the full screen */
+@media (max-width: 900px) {
+  .main.hide-data .data-strip { display: none; }
+  .main.hide-data .views { max-height: none; flex: 1; }
+  .main.hide-data .view-panel { min-height: 0; }
+  .main.hide-data .view-panel canvas { min-height: 0; }
+}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-brand">
+    <button class="sidebar-toggle" id="sidebarToggle" aria-label="Open design controls">&#9776;</button>
+    <img class="header-logo" src="Logo_white.png" alt="Vitex Lucens">
+    <h1><span>&mdash;</span> Airship Parameterised Design</h1>
+  </div>
+  <div class="header-status">
+    <span class="status-val">Chord: <b id="hdr_chord">--</b> m</span>
+    <span class="status-val">Lift: <b id="hdr_lift">--</b> N</span>
+    <span class="status-val">Mass: <b id="hdr_mass">--</b> kg</span>
+    <span class="status-val">Excess: <b id="hdr_excess">--</b> N</span>
+    <span class="status-pill" id="hdr_status">--</span>
+  </div>
+</div>
+
+<div class="app">
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="section" id="sec-hull">
+      <div class="section-header"><div class="dot dot-hull"></div><h2>Hull Geometry</h2></div>
+      <div class="section-body">
+        <div class="param"><div class="param-top"><span class="param-label">Length</span><span><span class="param-val" id="v_hullLength_m">12.75</span><span class="param-unit">m</span></span></div><input type="range" id="in_hullLength_m" min="3" max="40" step="0.25" value="12.75"></div>
+        <div class="param"><div class="param-top"><span class="param-label">Radius</span><span><span class="param-val" id="v_hullRadius_m">1.22</span><span class="param-unit">m</span></span></div><input type="range" id="in_hullRadius_m" min="0.3" max="5" step="0.01" value="1.22"></div>
+        <div class="param"><div class="param-top"><span class="param-label">Nose length</span><span><span class="param-val" id="v_noseLength_m">2.00</span><span class="param-unit">m</span></span></div><input type="range" id="in_noseLength_m" min="0.5" max="10" step="0.1" value="2"></div>
+        <div class="param"><div class="param-top"><span class="param-label">Tail extension</span><span><span class="param-val" id="v_tailRatio">3.50</span><span class="param-unit">m</span></span></div><input type="range" id="in_tailRatio" min="0.5" max="10" step="0.1" value="3.5"><div class="param-hint">Tail semi-axis = nose length + this value</div></div>
+        <div class="param" id="param-skinDensity"><div class="param-top"><span class="param-label">Skin density</span><span><span class="param-val" id="v_hullMaterialMass_kgpm2">0.12</span><span class="param-unit">kg/m&sup2;</span></span></div><input type="range" id="in_hullMaterialMass_kgpm2" min="0.01" max="2" step="0.01" value="0.12"></div>
+      </div>
+    </div>
+    <div class="section" id="sec-atmo">
+      <div class="section-header"><div class="dot dot-atmo"></div><h2>Atmosphere</h2></div>
+      <div class="section-body">
+        <div class="param"><div class="param-top"><span class="param-label">Altitude</span><span><span class="param-val" id="v_altitude_m">0</span><span class="param-unit">m</span></span></div><input type="range" id="in_altitude_m" min="0" max="11000" step="50" value="0"></div>
+        <div class="param"><div class="param-top"><span class="param-label">Temperature</span><span><span class="param-val" id="v_temperature_K">288.2</span><span class="param-unit">K</span></span></div><input type="range" id="in_temperature_K" min="200" max="330" step="0.5" value="288.15"></div>
+        <div class="param"><div class="param-top"><span class="param-label">Lifting gas</span></div><select id="in_liftingGas"><option value="helium" selected>Helium</option><option value="hydrogen">Hydrogen</option></select></div>
+      </div>
+    </div>
+    <div class="section" id="sec-fins">
+      <div class="section-header"><div class="dot dot-fins"></div><h2>Fin Configuration</h2></div>
+      <div class="section-body">
+        <div class="param"><div class="param-top"><span class="param-label">Layout</span></div><select id="in_numbFins"><option value="3" selected>3-fin (inverted-Y)</option><option value="4">4-fin (X-tail)</option></select></div>
+        <div class="param" id="param-leTaper"><div class="param-top"><span class="param-label">LE taper angle</span><span><span class="param-val" id="v_LEtaper_deg">15</span><span class="param-unit">&deg;</span></span></div><input type="range" id="in_LEtaper_deg" min="5" max="45" step="1" value="15"></div>
+        <div class="param"><div class="param-top"><span class="param-label">Fin span</span><span><span class="param-val" id="v_tailingEdgeHight_m">1.00</span><span class="param-unit">m</span></span></div><input type="range" id="in_tailingEdgeHight_m" min="0.2" max="8" step="0.05" value="1"></div>
+        <div class="param"><div class="param-top"><span class="param-label">Thickness ratio</span><span><span class="param-val" id="v_thickNessRatio">0.15</span></span></div><input type="range" id="in_thickNessRatio" min="0.04" max="0.30" step="0.01" value="0.15"></div>
+        <div class="param"><div class="param-top"><span class="param-label">Max thickness at</span><span><span class="param-val" id="v_maxThickLoc">0.30</span><span class="param-unit">c</span></span></div><input type="range" id="in_maxThickLoc" min="0.20" max="0.50" step="0.01" value="0.30"><div class="param-hint">NACA profile type: 0.30c = standard, lower = aggressive LE, higher = laminar</div></div>
+        <div class="param"><div class="param-top"><span class="param-label">Fin position</span><span><span class="param-val" id="v_finPosFrac">0.92</span><span class="param-unit">x/L</span></span></div><input type="range" id="in_finPosFrac" min="0.50" max="0.99" step="0.01" value="0.92"></div>
+        <div class="param"><div class="param-top"><span class="param-label">Dihedral</span><span><span class="param-val" id="v_dihedral_deg">50</span><span class="param-unit">&deg;</span></span></div><input type="range" id="in_dihedral_deg" min="10" max="85" step="1" value="50"></div>
+        <div class="param" id="param-finMatDensity"><div class="param-top"><span class="param-label">Material density</span><span><span class="param-val" id="v_finMaterialDensity_kgpm3">3</span><span class="param-unit">kg/m&sup3;</span></span></div><input type="range" id="in_finMaterialDensity_kgpm3" min="0" max="10" step="0.1" value="3"></div>
+        <div class="param" id="param-finSafety"><div class="param-top"><span class="param-label">Safety factor</span><span><span class="param-val" id="v_finSaftyFactor_m">0.25</span><span class="param-unit">m</span></span></div><input type="range" id="in_finSaftyFactor_m" min="0" max="2" step="0.05" value="0.25"></div>
+      </div>
+    </div>
+    <div class="section" id="sec-ballast">
+      <div class="section-header"><div class="dot dot-bal"></div><h2>Ballast</h2></div>
+      <div class="section-body">
+        <div class="param"><div class="param-top"><span class="param-label">Option</span></div><select id="in_ballastOption"><option value="none">None</option><option value="nose">Nose</option><option value="gondola" selected>Gondola</option></select></div>
+      </div>
+    </div>
+  </div>
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+  <!-- MAIN -->
+  <div class="main">
+    <!-- View mode tabs -->
+    <div class="view-toolbar">
+      <button class="view-btn" data-mode="engineering">Engineering Views</button>
+      <button class="view-btn active" data-mode="3d">3D View</button>
+      <button class="view-btn" data-mode="aero">Panel Aero</button>
+      <button class="view-btn" data-mode="docs">Documentation</button>
+    </div>
+
+    <div class="aero-toolbar" id="aeroToolbar">
+      <label>V<sub>&infin;</sub></label>
+      <input type="range" id="in_panelVinf" min="1" max="20" step="0.5" value="10" style="width:90px;">
+      <span><span class="aero-val" id="v_panelVinf">10.0</span><span class="aero-unit">m/s</span></span>
+      <div class="aero-sep"></div>
+      <label>&alpha;</label>
+      <input type="range" id="in_alpha_deg" min="-20" max="20" step="0.5" value="0" style="width:180px;">
+      <span><span class="aero-val" id="v_alpha_deg">0.0</span><span class="aero-unit">&deg;</span></span>
+      <div class="aero-sep"></div>
+      <button class="sim-btn" id="simBtn">Simulate</button>
+      <span class="sim-status" id="simStatus"></span>
+    </div>
+
+    <div class="views mode-3d" id="viewsContainer">
+      <div class="view-panel panel-eng"><span class="view-label">Side (x-z)</span><canvas id="cvSide"></canvas></div>
+      <div class="view-panel panel-eng"><span class="view-label">Top (x-y)</span><canvas id="cvTop"></canvas></div>
+      <div class="view-panel panel-eng"><span class="view-label">Rear (y-z)</span><canvas id="cvRear"></canvas></div>
+      <div class="view-panel panel-3d"><img class="view-logo" src="Logo_white.png" alt="Vitex Lucens"><span class="view-label">3D &mdash; drag to rotate, scroll to zoom</span><canvas id="cv3d"></canvas></div>
+      <div class="view-panel panel-aero"><span class="view-label">Hull</span><canvas id="cvAeroHull"></canvas></div>
+      <div class="view-panel panel-aero"><span class="view-label">Fin</span><canvas id="cvAeroFin"></canvas></div>
+      <div class="view-panel panel-docs" style="overflow-y:auto;">
+        <div class="docs-content">
+          <h2>Heuristic Design Approach</h2>
+          <p>This code implements a heuristic design approach for airships.</p>
+
+          <p>A primary challenge in airship dynamics is that elliptical hull forms are fundamentally dynamically unstable. This presents an inverse problem compared to heavier than air aircraft: whereas conventional aircraft are typically statically unstable but dynamically stable, airships are statically stable yet dynamically unstable.</p>
+
+          <p>Practically, this means an airship cannot maintain straight-line flight, it will always be in a turn. Consequently, the design must ensure this turn is stable without continuous control input. To achieve this, the fins must be sized and positioned to effectively counteract the turning moment generated by the hull's lift.</p>
+
+          <p>Using the work of Walter Rudolph Munk and Harold Gordon Lamb, this code defines the necessary fin size and position to neutralize the body's turning force. It also includes an option to adjust ballast distribution to tune the vessel's static stability margin. Additionally, a panel-method solver is included for basic aerodynamic analysis of the hull and fin cross-sections.</p>
+
+          <h2>Why Parameterised Design</h2>
+          <p>Parameterised design enables rapid exploration of the design space. Instead of constructing a single geometry and evaluating it, a handful of inputs drive the full airship definition: hull length and radius, nose and tail extensions, fin span and chord, and the operating environment. This makes it possible to develop intuition about how each parameter influences buoyancy, mass, stability, and handling before committing to detailed modelling.</p>
+
+          <p>The method is intended to produce an initial classic airship design that is capable of stable flight. It is not a full flight-dynamics simulation, but a fast, physically consistent first pass that can guide later analysis.</p>
+
+          <h2>Key Concepts</h2>
+          <h3>Coordinate Frame</h3>
+          <p>All quantities are expressed in a right-handed body-fixed frame with <code>x</code> directed forward along the longitudinal axis, <code>y</code> to starboard, and <code>z</code> downward. This convention is maintained consistently across the geometry, mass, aerodynamics, and inertia models.</p>
+
+          <h3>Hull Form</h3>
+          <p>The hull is modelled as an axisymmetric body of revolution formed by three contiguous segments: an elliptical nose, a cylindrical centre body, and an elliptical tail. The nose and tail semi-axes govern the fore-and-aft fineness of the hull.</p>
+          <p>The centre of volume (CV) is evaluated by direct volume integration over the hull point cloud, excluding fin contributions. The centre of gravity (CG) is determined from the distributed mass of the structure, fins, lifting gas, and any ballast.</p>
+
+          <h3>Fins and Static-Dynamic Stability</h3>
+          <p>Ellipsoidal bodies moving through a fluid at incidence generate a couple that tends to rotate the body into the flow. The tail surfaces are therefore sized to produce a counter-moment sufficient to hold the airship in a steady turn without sustained control input. This equilibrium condition is central to the heuristic fin-sizing method.</p>
+
+          <h3>Ballast</h3>
+          <p>Ballast repositions the CG along the <code>x</code>-axis, thereby adjusting the longitudinal static margin. The required ballast mass follows from the moment balance between CG, CV, and the total vehicle weight.</p>
+
+          <h3>Buoyancy</h3>
+          <p>Net lift is governed by the density difference between the displaced ambient air and the lifting gas. Atmospheric properties are obtained from an ISA-based model with altitude and temperature inputs; helium and hydrogen are provided as gas options.</p>
+
+          <h3>Inertia</h3>
+          <p>Rigid-body mass moments are computed by integrating discrete component masses about the CG. Virtual, or added, mass is treated through Lamb's coefficients for an ellipsoid, evaluated numerically for the actual hull fineness ratio rather than interpolated from tabulated values.</p>
+
+          <h3>Panel Aerodynamics</h3>
+          <p>A two-dimensional vortex-panel method solves for the incompressible potential flow about the hull meridional section and an isolated fin section. The boundary is discretised into straight panels carrying piecewise-constant vorticity; the no-penetration condition yields a linear system for the panel strengths, from which C<sub>l</sub>, C<sub>d</sub>, and surface pressure coefficient C<sub>p</sub> are obtained.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="data-strip" id="dataStrip">
+      <div class="data-col" id="colGeom"><h3>Geometry</h3></div>
+      <div class="data-col" id="colMass"><h3>Mass &amp; Ballast</h3></div>
+      <div class="data-col" id="colBuoy"><h3>Buoyancy</h3></div>
+      <div class="data-col" id="colStab"><h3>Stability</h3></div>
+      <div class="data-col" id="colInertia"><h3>Inertia</h3></div>
+    </div>
+  </div>
+</div>
+
+<script src="blimp_design.js"></script>
+<script>
+// ── Helpers ──
+function fv(v, d) { return Number(v).toFixed(d !== undefined ? d : 2); }
+
+function dataRows(colId, rows) {
+  var col = document.getElementById(colId);
+  var h3 = col.querySelector('h3');
+  col.innerHTML = '';
+  col.appendChild(h3);
+  rows.forEach(function(r) {
+    if (r === '---') {
+      var hr = document.createElement('div');
+      hr.className = 'data-divider';
+      col.appendChild(hr);
+      return;
+    }
+    var div = document.createElement('div');
+    div.className = 'data-row-item';
+    div.innerHTML = '<span class="dl">' + r[0] + '</span><span class="dv' +
+      (r[2] ? ' ' + r[2] : '') + '">' + r[1] + '</span>';
+    col.appendChild(div);
+  });
+}
+
+// ── Read inputs ──
+function getInputs() {
+  return {
+    hullLength_m:            parseFloat(document.getElementById('in_hullLength_m').value),
+    hullRadius_m:            parseFloat(document.getElementById('in_hullRadius_m').value),
+    noseLength_m:            parseFloat(document.getElementById('in_noseLength_m').value),
+    tailRatio:               parseFloat(document.getElementById('in_tailRatio').value),
+    hullMaterialMass_kgpm2:  parseFloat(document.getElementById('in_hullMaterialMass_kgpm2').value),
+    altitude_m:              parseFloat(document.getElementById('in_altitude_m').value),
+    temperature_K:           parseFloat(document.getElementById('in_temperature_K').value),
+    liftingGas:              document.getElementById('in_liftingGas').value,
+    numbFins:                parseInt(document.getElementById('in_numbFins').value),
+    LeadingEdgeTapperAngle_rad: parseFloat(document.getElementById('in_LEtaper_deg').value) * Math.PI / 180,
+    tailingEdgeHight_m:      parseFloat(document.getElementById('in_tailingEdgeHight_m').value),
+    thickNessRatio:          parseFloat(document.getElementById('in_thickNessRatio').value),
+    xPosTailEdge_m:          parseFloat(document.getElementById('in_finPosFrac').value) * parseFloat(document.getElementById('in_hullLength_m').value),
+    dihedral_rad:            parseFloat(document.getElementById('in_dihedral_deg').value) * Math.PI / 180,
+    finMaterialDensity_kgpm3:parseFloat(document.getElementById('in_finMaterialDensity_kgpm3').value),
+    finSaftyFactor_m:        parseFloat(document.getElementById('in_finSaftyFactor_m').value),
+    ballastOption:           document.getElementById('in_ballastOption').value
+  };
+}
+
+// ── Sync slider value displays ──
+function syncSliderValues() {
+  var map = {
+    'in_hullLength_m': ['v_hullLength_m', 2],
+    'in_hullRadius_m': ['v_hullRadius_m', 2],
+    'in_noseLength_m': ['v_noseLength_m', 2],
+    'in_tailRatio':    ['v_tailRatio', 2],
+    'in_hullMaterialMass_kgpm2': ['v_hullMaterialMass_kgpm2', 2],
+    'in_altitude_m':   ['v_altitude_m', 0],
+    'in_temperature_K':['v_temperature_K', 1],
+    'in_LEtaper_deg':  ['v_LEtaper_deg', 0],
+    'in_tailingEdgeHight_m': ['v_tailingEdgeHight_m', 2],
+    'in_thickNessRatio':     ['v_thickNessRatio', 2],
+    'in_finPosFrac':         ['v_finPosFrac', 2],
+    'in_dihedral_deg':       ['v_dihedral_deg', 0],
+    'in_finMaterialDensity_kgpm3': ['v_finMaterialDensity_kgpm3', 1],
+    'in_finSaftyFactor_m':         ['v_finSaftyFactor_m', 2],
+    'in_maxThickLoc':              ['v_maxThickLoc', 2]
+  };
+  for (var inId in map) {
+    var el = document.getElementById(inId);
+    document.getElementById(map[inId][0]).textContent = fv(el.value, map[inId][1]);
+  }
+}
+
+// ── Canvas setup ──
+function setupCanvas(id) {
+  var canvas = document.getElementById(id);
+  var rect = canvas.parentElement.getBoundingClientRect();
+  var dpr = window.devicePixelRatio || 1;
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  canvas.style.width = rect.width + 'px';
+  canvas.style.height = rect.height + 'px';
+  var ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, rect.width, rect.height);
+  return { ctx: ctx, W: rect.width, H: rect.height };
+}
+
+function drawGrid(ctx, W, H, txFn, tyFn, xMin, xMax, yMin, yMax, xLabel, yLabel) {
+  var gSmall = W < 400;
+  ctx.strokeStyle = 'rgba(26,58,79,0.6)';
+  ctx.lineWidth = 0.5;
+  ctx.font = (gSmall ? 7 : 9) + 'px -apple-system, sans-serif';
+  ctx.fillStyle = '#5a8a9e';
+  function niceStep(range) {
+    var rough = range / 6;
+    var pow = Math.pow(10, Math.floor(Math.log10(rough)));
+    var norm = rough / pow;
+    if (norm < 1.5) return pow;
+    if (norm < 3.5) return 2 * pow;
+    if (norm < 7.5) return 5 * pow;
+    return 10 * pow;
+  }
+  var sx = niceStep(xMax - xMin), sy = niceStep(yMax - yMin);
+  for (var x = Math.ceil(xMin / sx) * sx; x <= xMax; x += sx) {
+    var px = txFn(x);
+    if (px < 30 || px > W - 5) continue;
+    ctx.beginPath(); ctx.moveTo(px, 20); ctx.lineTo(px, H - 18); ctx.stroke();
+    ctx.textAlign = 'center';
+    ctx.fillText(fv(x, sx >= 1 ? 0 : 1), px, H - 6);
+  }
+  for (var y = Math.ceil(yMin / sy) * sy; y <= yMax; y += sy) {
+    var py = tyFn(y);
+    if (py < 20 || py > H - 18) continue;
+    ctx.beginPath(); ctx.moveTo(30, py); ctx.lineTo(W - 5, py); ctx.stroke();
+    ctx.textAlign = 'right';
+    ctx.fillText(fv(y, sy >= 1 ? 0 : 1), 28, py + 3);
+  }
+  ctx.fillStyle = '#5a8a9e'; ctx.font = (gSmall ? 8 : 10) + 'px -apple-system, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(xLabel, W / 2, H - 1);
+  ctx.save(); ctx.translate(gSmall ? 6 : 10, H / 2); ctx.rotate(-Math.PI / 2);
+  ctx.fillText(yLabel, 0, 0); ctx.restore();
+}
+
+// ── Side profile ──
+function drawSide(r) {
+  var c = setupCanvas('cvSide'), ctx = c.ctx, W = c.W, H = c.H;
+  var hx = r.hullPointArray.x, hr = r.hullPointArray.r;
+  var maxR = Math.max.apply(null, Array.from(hr));
+  var maxX = Math.max.apply(null, Array.from(hx));
+  var minZ = -maxR, maxZ = maxR;
+  for (var fi = 0; fi < r.finClouds.length; fi++) {
+    var fc = r.finClouds[fi];
+    for (var i = 0; i < fc.z.length; i++) { if (fc.z[i] < minZ) minZ = fc.z[i]; if (fc.z[i] > maxZ) maxZ = fc.z[i]; }
+  }
+  var padX = maxX * 0.06, padZ = (maxZ - minZ) * 0.12;
+  var xMin = -padX, xMax = maxX + padX, zMin = minZ - padZ, zMax = maxZ + padZ;
+  var mH = Math.max(24, Math.min(40, W * 0.08)), mV = Math.max(20, Math.min(44, H * 0.08));
+  var s = Math.min((W - mH) / (xMax - xMin), (H - mV) / (zMax - zMin));
+  var ox = mH * 0.85 + ((W - mH) - (xMax - xMin) * s) / 2;
+  var oy = mV * 0.5 + ((H - mV) - (zMax - zMin) * s) / 2;
+  function tx(x) { return ox + (x - xMin) * s; }
+  function tz(z) { return oy + (z - zMin) * s; }
+  drawGrid(ctx, W, H, tx, tz, xMin, xMax, zMin, zMax, 'x [m]', 'z [m]');
+  // Hull
+  ctx.beginPath(); ctx.moveTo(tx(hx[0]), tz(-hr[0]));
+  for (var i = 1; i < hx.length; i++) ctx.lineTo(tx(hx[i]), tz(-hr[i]));
+  for (var i = hx.length - 1; i >= 0; i--) ctx.lineTo(tx(hx[i]), tz(hr[i]));
+  ctx.closePath(); ctx.fillStyle = 'rgba(124,196,212,0.08)'; ctx.fill();
+  ctx.strokeStyle = 'rgba(124,196,212,0.5)'; ctx.lineWidth = 1.5; ctx.stroke();
+  // Fins
+  for (var fi = 0; fi < r.finClouds.length; fi++) {
+    var fc = r.finClouds[fi]; ctx.fillStyle = 'rgba(140,180,200,0.4)';
+    for (var i = 0; i < fc.x.length; i += 2) ctx.fillRect(tx(fc.x[i]) - 0.5, tz(fc.z[i]) - 0.5, 1.5, 1.5);
+  }
+  // CV
+  ctx.strokeStyle = 'rgba(90,191,138,0.8)'; ctx.lineWidth = 1.5; ctx.setLineDash([]);
+  ctx.beginPath(); ctx.moveTo(tx(r.centerOfVolume_m), tz(zMin)); ctx.lineTo(tx(r.centerOfVolume_m), tz(zMax)); ctx.stroke();
+  ctx.fillStyle = '#5abf8a'; ctx.font = 'bold 10px sans-serif'; ctx.fillText('CV', tx(r.centerOfVolume_m) + 4, tz(zMin) + 14);
+  // CG
+  ctx.strokeStyle = 'rgba(224,96,80,0.8)'; ctx.setLineDash([5, 3]);
+  ctx.beginPath(); ctx.moveTo(tx(r.centerOfGravity_m[0]), tz(zMin)); ctx.lineTo(tx(r.centerOfGravity_m[0]), tz(zMax)); ctx.stroke();
+  ctx.setLineDash([]); ctx.fillStyle = '#e06050'; ctx.fillText('CG', tx(r.centerOfGravity_m[0]) + 4, tz(zMin) + 26);
+  // Ballast
+  if (r.ballastMass_kg > 0) {
+    var bx = tx(r.ballastPos_m[0]), bz = tz(r.ballastPos_m[2]);
+    ctx.fillStyle = '#c9a84c'; ctx.beginPath(); ctx.moveTo(bx, bz - 6); ctx.lineTo(bx + 5, bz + 3); ctx.lineTo(bx - 5, bz + 3); ctx.closePath(); ctx.fill();
+    ctx.font = '9px sans-serif'; ctx.fillText('B', bx + 7, bz + 1);
+  }
+  // SM bar
+  var smBar = tz(zMax) + 8;
+  if (smBar < H - 4) {
+    ctx.strokeStyle = '#5a8a9e'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(tx(r.centerOfVolume_m), smBar); ctx.lineTo(tx(r.centerOfGravity_m[0]), smBar); ctx.stroke();
+    ctx.fillStyle = '#5a8a9e'; ctx.font = '9px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('SM ' + fv(r.staticMargin_m, 3) + 'm', (tx(r.centerOfVolume_m) + tx(r.centerOfGravity_m[0])) / 2, smBar - 2);
+    ctx.textAlign = 'left';
+  }
+}
+
+// ── Top view ──
+function drawTop(r) {
+  var c = setupCanvas('cvTop'), ctx = c.ctx, W = c.W, H = c.H;
+  var hx = r.hullPointArray.x, hr = r.hullPointArray.r;
+  var maxR = Math.max.apply(null, Array.from(hr));
+  var maxX = Math.max.apply(null, Array.from(hx));
+  var minY = -maxR, maxY = maxR;
+  for (var fi = 0; fi < r.finClouds.length; fi++) { var fc = r.finClouds[fi]; for (var i = 0; i < fc.y.length; i++) { if (fc.y[i] < minY) minY = fc.y[i]; if (fc.y[i] > maxY) maxY = fc.y[i]; } }
+  var padX = maxX * 0.06, padY = (maxY - minY) * 0.12;
+  var xMin = -padX, xMax = maxX + padX, yMin = minY - padY, yMax = maxY + padY;
+  var mH2 = Math.max(24, Math.min(40, W * 0.08)), mV2 = Math.max(20, Math.min(44, H * 0.08));
+  var s = Math.min((W - mH2) / (xMax - xMin), (H - mV2) / (yMax - yMin));
+  var ox = mH2 * 0.85 + ((W - mH2) - (xMax - xMin) * s) / 2, oy = mV2 * 0.5 + ((H - mV2) - (yMax - yMin) * s) / 2;
+  function tx(x) { return ox + (x - xMin) * s; }
+  function ty(y) { return oy + (y - yMin) * s; }
+  drawGrid(ctx, W, H, tx, ty, xMin, xMax, yMin, yMax, 'x [m]', 'y [m]');
+  ctx.beginPath(); ctx.moveTo(tx(hx[0]), ty(-hr[0]));
+  for (var i = 1; i < hx.length; i++) ctx.lineTo(tx(hx[i]), ty(-hr[i]));
+  for (var i = hx.length - 1; i >= 0; i--) ctx.lineTo(tx(hx[i]), ty(hr[i]));
+  ctx.closePath(); ctx.fillStyle = 'rgba(124,196,212,0.08)'; ctx.fill();
+  ctx.strokeStyle = 'rgba(124,196,212,0.5)'; ctx.lineWidth = 1.5; ctx.stroke();
+  for (var fi = 0; fi < r.finClouds.length; fi++) { var fc = r.finClouds[fi]; ctx.fillStyle = 'rgba(140,180,200,0.4)'; for (var i = 0; i < fc.x.length; i += 2) ctx.fillRect(tx(fc.x[i]) - 0.5, ty(fc.y[i]) - 0.5, 1.5, 1.5); }
+  ctx.strokeStyle = 'rgba(90,191,138,0.8)'; ctx.lineWidth = 1.5; ctx.setLineDash([]);
+  ctx.beginPath(); ctx.moveTo(tx(r.centerOfVolume_m), ty(yMin)); ctx.lineTo(tx(r.centerOfVolume_m), ty(yMax)); ctx.stroke();
+  ctx.strokeStyle = 'rgba(224,96,80,0.8)'; ctx.setLineDash([5, 3]);
+  ctx.beginPath(); ctx.moveTo(tx(r.centerOfGravity_m[0]), ty(yMin)); ctx.lineTo(tx(r.centerOfGravity_m[0]), ty(yMax)); ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+// ── Rear view ──
+function drawRear(r) {
+  var c = setupCanvas('cvRear'), ctx = c.ctx, W = c.W, H = c.H;
+  var minY = -r.hullRadius_m, maxY = r.hullRadius_m, minZ = -r.hullRadius_m, maxZ = r.hullRadius_m;
+  for (var fi = 0; fi < r.finClouds.length; fi++) { var fc = r.finClouds[fi]; for (var i = 0; i < fc.y.length; i++) { if (fc.y[i] < minY) minY = fc.y[i]; if (fc.y[i] > maxY) maxY = fc.y[i]; if (fc.z[i] < minZ) minZ = fc.z[i]; if (fc.z[i] > maxZ) maxZ = fc.z[i]; } }
+  var pad = Math.max(maxY - minY, maxZ - minZ) * 0.15;
+  var yMin = minY - pad, yMax = maxY + pad, zMin = minZ - pad, zMax = maxZ + pad;
+  var mH3 = Math.max(24, Math.min(40, W * 0.08)), mV3 = Math.max(20, Math.min(44, H * 0.08));
+  var s = Math.min((W - mH3) / (yMax - yMin), (H - mV3) / (zMax - zMin));
+  var ox = mH3 * 0.85 + ((W - mH3) - (yMax - yMin) * s) / 2, oy = mV3 * 0.5 + ((H - mV3) - (zMax - zMin) * s) / 2;
+  function ty(y) { return ox + (y - yMin) * s; }
+  function tz(z) { return oy + (z - zMin) * s; }
+  drawGrid(ctx, W, H, ty, tz, yMin, yMax, zMin, zMax, 'y [m]', 'z [m]');
+  // Hull circle at fin station
+  var hx = r.hullPointArray.x, hr = r.hullPointArray.r, rAtTE = 0;
+  var xTE = parseFloat(document.getElementById('in_finPosFrac').value) * r.hullLength_m;
+  for (var i = 0; i < hx.length - 1; i++) { if (hx[i] <= xTE && hx[i+1] >= xTE) { var t = (xTE - hx[i]) / (hx[i+1] - hx[i]); rAtTE = hr[i] + t * (hr[i+1] - hr[i]); break; } }
+  if (rAtTE <= 0) rAtTE = r.hullRadius_m * 0.5;
+  ctx.strokeStyle = 'rgba(124,196,212,0.5)'; ctx.fillStyle = 'rgba(124,196,212,0.06)'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.arc(ty(0), tz(0), rAtTE * s, 0, 2 * Math.PI); ctx.fill(); ctx.stroke();
+  for (var fi = 0; fi < r.finClouds.length; fi++) { var fc = r.finClouds[fi]; ctx.fillStyle = 'rgba(140,180,200,0.5)'; for (var i = 0; i < fc.y.length; i += 2) ctx.fillRect(ty(fc.y[i]) - 0.5, tz(fc.z[i]) - 0.5, 1.5, 1.5); }
+  ctx.strokeStyle = 'rgba(255,255,255,0.08)'; ctx.lineWidth = 0.5; ctx.beginPath();
+  ctx.moveTo(ty(yMin), tz(0)); ctx.lineTo(ty(yMax), tz(0)); ctx.moveTo(ty(0), tz(zMin)); ctx.lineTo(ty(0), tz(zMax)); ctx.stroke();
+}
+
+// ── 3D view with mouse rotation ──
+var cam3d = { rotX: -0.3, rotZ: 0.4, dist: 0.624, dragging: false, lastX: 0, lastY: 0 };
+(function() {
+  var cv = document.getElementById('cv3d');
+  cv.addEventListener('mousedown', function(e) { cam3d.dragging = true; cam3d.lastX = e.clientX; cam3d.lastY = e.clientY; });
+  window.addEventListener('mouseup', function() { cam3d.dragging = false; });
+  window.addEventListener('mousemove', function(e) {
+    if (!cam3d.dragging) return;
+    cam3d.rotZ += (e.clientX - cam3d.lastX) * 0.007;
+    cam3d.rotX -= (e.clientY - cam3d.lastY) * 0.007;
+    cam3d.rotX = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, cam3d.rotX));
+    cam3d.lastX = e.clientX; cam3d.lastY = e.clientY;
+    if (_lastResults) draw3d(_lastResults);
+  });
+  cv.addEventListener('wheel', function(e) {
+    e.preventDefault();
+    cam3d.dist *= (1 + e.deltaY * 0.001);
+    cam3d.dist = Math.max(0.28, Math.min(10, cam3d.dist));
+    if (_lastResults) draw3d(_lastResults);
+  }, { passive: false });
+  // Touch: single-finger drag to rotate, two-finger pinch to zoom
+  cv.addEventListener('touchstart', function(e) {
+    if (e.touches.length === 1) {
+      cam3d.dragging = true;
+      cam3d.lastX = e.touches[0].clientX;
+      cam3d.lastY = e.touches[0].clientY;
+    }
+    if (e.touches.length === 2) {
+      cam3d.dragging = false;
+      cam3d.pinchDist = Math.hypot(e.touches[1].clientX - e.touches[0].clientX, e.touches[1].clientY - e.touches[0].clientY);
+    }
+  }, { passive: true });
+  cv.addEventListener('touchmove', function(e) {
+    e.preventDefault();
+    if (e.touches.length === 1 && cam3d.dragging) {
+      var tx = e.touches[0].clientX, ty = e.touches[0].clientY;
+      cam3d.rotZ += (tx - cam3d.lastX) * 0.007;
+      cam3d.rotX -= (ty - cam3d.lastY) * 0.007;
+      cam3d.rotX = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, cam3d.rotX));
+      cam3d.lastX = tx; cam3d.lastY = ty;
+      if (_lastResults) draw3d(_lastResults);
+    }
+    if (e.touches.length === 2 && cam3d.pinchDist) {
+      var nd = Math.hypot(e.touches[1].clientX - e.touches[0].clientX, e.touches[1].clientY - e.touches[0].clientY);
+      cam3d.dist *= cam3d.pinchDist / nd;
+      cam3d.dist = Math.max(0.28, Math.min(10, cam3d.dist));
+      cam3d.pinchDist = nd;
+      if (_lastResults) draw3d(_lastResults);
+    }
+  }, { passive: false });
+  cv.addEventListener('touchend', function() { cam3d.dragging = false; cam3d.pinchDist = null; }, { passive: true });
+})();
+
+function draw3d(r) {
+  var c = setupCanvas('cv3d'), ctx = c.ctx, W = c.W, H = c.H;
+  var hx = r.hullPointArray.x, hr = r.hullPointArray.r;
+  var maxX = Math.max.apply(null, Array.from(hx));
+  var maxR = Math.max.apply(null, Array.from(hr));
+  var extent = Math.max(maxX, maxR * 2);
+
+  // Camera: orbit around centre of hull
+  var cx = maxX / 2, cy = 0, cz = 0;
+  var cosX = Math.cos(cam3d.rotX), sinX = Math.sin(cam3d.rotX);
+  var cosZ = Math.cos(cam3d.rotZ), sinZ = Math.sin(cam3d.rotZ);
+  var scale = (Math.min(W, H) * 0.4) / (extent * cam3d.dist);
+
+  function project(px, py, pz) {
+    // Translate to centre
+    var x = px - cx, y = py - cy, z = pz - cz;
+    // Rotate around z-axis (yaw)
+    var x1 = x * cosZ - y * sinZ, y1 = x * sinZ + y * cosZ, z1 = z;
+    // Rotate around x-axis (pitch)
+    var y2 = y1 * cosX - z1 * sinX, z2 = y1 * sinX + z1 * cosX;
+    return { sx: W / 2 + x1 * scale, sy: H / 2 + z2 * scale, depth: y2 };
+  }
+
+  // Draw hull wireframe (longitudinal lines at angular intervals)
+  ctx.strokeStyle = 'rgba(124,196,212,0.25)'; ctx.lineWidth = 0.8;
+  var angStep = Math.PI / 8;
+  for (var a = 0; a < 2 * Math.PI; a += angStep) {
+    var ca = Math.cos(a), sa = Math.sin(a);
+    ctx.beginPath();
+    for (var i = 0; i < hx.length; i += 4) {
+      var p = project(hx[i], hr[i] * ca, hr[i] * sa);
+      if (i === 0) ctx.moveTo(p.sx, p.sy); else ctx.lineTo(p.sx, p.sy);
+    }
+    ctx.stroke();
+  }
+  // Hull cross-section rings
+  ctx.strokeStyle = 'rgba(124,196,212,0.15)';
+  var ringStep = Math.max(1, Math.floor(hx.length / 20));
+  for (var i = 0; i < hx.length; i += ringStep) {
+    ctx.beginPath();
+    for (var a = 0; a <= 2 * Math.PI + 0.1; a += Math.PI / 16) {
+      var p = project(hx[i], hr[i] * Math.cos(a), hr[i] * Math.sin(a));
+      if (a === 0) ctx.moveTo(p.sx, p.sy); else ctx.lineTo(p.sx, p.sy);
+    }
+    ctx.stroke();
+  }
+
+  // Fins as point clouds
+  ctx.fillStyle = 'rgba(140,180,200,0.5)';
+  for (var fi = 0; fi < r.finClouds.length; fi++) {
+    var fc = r.finClouds[fi];
+    for (var i = 0; i < fc.x.length; i += 3) {
+      var p = project(fc.x[i], fc.y[i], fc.z[i]);
+      ctx.fillRect(p.sx - 0.7, p.sy - 0.7, 1.5, 1.5);
+    }
+  }
+
+  // CV / CG lines
+  ctx.lineWidth = 2;
+  var cv1 = project(r.centerOfVolume_m, 0, -maxR), cv2 = project(r.centerOfVolume_m, 0, maxR);
+  ctx.strokeStyle = 'rgba(90,191,138,0.7)'; ctx.setLineDash([]);
+  ctx.beginPath(); ctx.moveTo(cv1.sx, cv1.sy); ctx.lineTo(cv2.sx, cv2.sy); ctx.stroke();
+  var cg1 = project(r.centerOfGravity_m[0], 0, -maxR), cg2 = project(r.centerOfGravity_m[0], 0, maxR);
+  ctx.strokeStyle = 'rgba(224,96,80,0.7)'; ctx.setLineDash([5,3]);
+  ctx.beginPath(); ctx.moveTo(cg1.sx, cg1.sy); ctx.lineTo(cg2.sx, cg2.sy); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Ballast
+  if (r.ballastMass_kg > 0) {
+    var bp = project(r.ballastPos_m[0], r.ballastPos_m[1], r.ballastPos_m[2]);
+    ctx.fillStyle = '#c9a84c';
+    ctx.beginPath(); ctx.arc(bp.sx, bp.sy, 5, 0, 2 * Math.PI); ctx.fill();
+  }
+
+  // Axis indicator
+  var axLen = 30;
+  var ox0 = project(0, 0, 0);
+  var axX = project(maxX * 0.15, 0, 0), axY = project(0, maxR * 0.8, 0), axZ = project(0, 0, maxR * 0.8);
+  ctx.lineWidth = 1.5; ctx.font = 'bold 10px sans-serif';
+  ctx.strokeStyle = '#e06050'; ctx.beginPath(); ctx.moveTo(ox0.sx, ox0.sy); ctx.lineTo(axX.sx, axX.sy); ctx.stroke();
+  ctx.fillStyle = '#e06050'; ctx.fillText('X', axX.sx + 4, axX.sy);
+  ctx.strokeStyle = '#5abf8a'; ctx.beginPath(); ctx.moveTo(ox0.sx, ox0.sy); ctx.lineTo(axY.sx, axY.sy); ctx.stroke();
+  ctx.fillStyle = '#5abf8a'; ctx.fillText('Y', axY.sx + 4, axY.sy);
+  ctx.strokeStyle = '#7cc4d4'; ctx.beginPath(); ctx.moveTo(ox0.sx, ox0.sy); ctx.lineTo(axZ.sx, axZ.sy); ctx.stroke();
+  ctx.fillStyle = '#7cc4d4'; ctx.fillText('Z', axZ.sx + 4, axZ.sy);
+}
+
+// ── View mode switching ──
+var currentMode = '3d';
+var aeroOnlySections = ['sec-hull', 'sec-fins'];
+var nonAeroSections  = ['sec-atmo', 'sec-ballast'];
+var aeroHideParams   = ['param-skinDensity', 'param-finMatDensity', 'param-finSafety', 'param-leTaper'];
+function applyModeUI(mode) {
+  // Aero toolbar
+  var at = document.getElementById('aeroToolbar');
+  if (mode === 'aero') { at.classList.add('visible'); } else { at.classList.remove('visible'); }
+  // Data strip — hide on aero and docs
+  var hideStrip = (mode === 'aero' || mode === 'docs');
+  document.getElementById('dataStrip').style.display = hideStrip ? 'none' : '';
+  // Sidebar — hide on docs
+  document.querySelector('.sidebar').style.display = (mode === 'docs') ? 'none' : '';
+  // Sidebar sections: in aero mode hide atmosphere & ballast, show hull & fins only
+  aeroOnlySections.forEach(function(id) { document.getElementById(id).style.display = ''; });
+  nonAeroSections.forEach(function(id) {
+    document.getElementById(id).style.display = (mode === 'aero') ? 'none' : '';
+  });
+  // Hide mass-related params on aero tab (not relevant to panel code)
+  aeroHideParams.forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.style.display = (mode === 'aero') ? 'none' : '';
+  });
+}
+applyModeUI(currentMode);
+document.querySelectorAll('.view-btn').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    document.querySelectorAll('.view-btn').forEach(function(b) { b.classList.remove('active'); });
+    btn.classList.add('active');
+    currentMode = btn.dataset.mode;
+    var vc = document.getElementById('viewsContainer');
+    vc.className = 'views mode-' + currentMode;
+    var mainEl = document.querySelector('.main');
+    if (currentMode === 'aero' || currentMode === 'docs') mainEl.classList.add('hide-data');
+    else mainEl.classList.remove('hide-data');
+    applyModeUI(currentMode);
+    if (_lastResults) setTimeout(function() { redraw(_lastResults, true); }, 30);
+  });
+});
+
+// ── Aero toolbar sliders (NOT part of live recalc) ──
+document.getElementById('in_alpha_deg').addEventListener('input', function() {
+  document.getElementById('v_alpha_deg').textContent = fv(this.value, 1);
+});
+document.getElementById('in_panelVinf').addEventListener('input', function() {
+  document.getElementById('v_panelVinf').textContent = fv(this.value, 1);
+});
+
+// ── Compute NACA symmetric coefficients for given max-thickness location ──
+// y(x) = (t/0.2) * [a0*x^0.5 + a1*x + a2*x^2 + a3*x^3 + a4*x^4]
+// Constraints: y(1)=0 (closed TE), dy/dx(m)=0 (max at m), y(m)=0.2
+// a0 fixed at 0.2969 (standard LE radius)
+function nacaCoeffsFromMaxThick(m) {
+  var a0 = 0.2969;
+  // At x=m: y(m) = a0*m^0.5 + a1*m + a2*m^2 + a3*m^3 + a4*m^4 = 0.2
+  // dy/dx(m) = 0.5*a0/m^0.5 + a1 + 2*a2*m + 3*a3*m^2 + 4*a4*m^3 = 0
+  // TE: a0 + a1 + a2 + a3 + a4 = 0
+  // 3 equations, 4 unknowns (a1..a4). Fix a4 via d2y/dx2(1)=0 (smooth TE curvature):
+  // d2y/dx2(1) = -0.25*a0 + 2*a2 + 6*a3 + 12*a4 = 0
+  var sm = Math.sqrt(m);
+  // System: [m, m^2, m^3, m^4] [a1,a2,a3,a4] = 0.2 - a0*sm
+  //         [1, 2m, 3m^2, 4m^3]               = -0.5*a0/sm
+  //         [1, 1,  1,    1   ]               = -a0
+  //         [0, 2,  6,    12  ]               = 0.25*a0
+  var m2 = m*m, m3 = m2*m, m4 = m3*m;
+  var b1 = 0.2 - a0 * sm;
+  var b2 = -0.5 * a0 / sm;
+  var b3 = -a0;
+  var b4 = 0.25 * a0;
+  // Solve 4x4 system via Gaussian elimination
+  var A = [
+    [m,  m2,  m3,  m4,  b1],
+    [1,  2*m, 3*m2,4*m3,b2],
+    [1,  1,   1,   1,   b3],
+    [0,  2,   6,   12,  b4]
+  ];
+  for (var col = 0; col < 4; col++) {
+    var pivotRow = col;
+    for (var row = col+1; row < 4; row++) {
+      if (Math.abs(A[row][col]) > Math.abs(A[pivotRow][col])) pivotRow = row;
+    }
+    var tmp = A[col]; A[col] = A[pivotRow]; A[pivotRow] = tmp;
+    for (var row = col+1; row < 4; row++) {
+      var f = A[row][col] / A[col][col];
+      for (var j = col; j < 5; j++) A[row][j] -= f * A[col][j];
+    }
+  }
+  var x = [0,0,0,0];
+  for (var i = 3; i >= 0; i--) {
+    var s = A[i][4];
+    for (var j = i+1; j < 4; j++) s -= A[i][j] * x[j];
+    x[i] = s / A[i][i];
+  }
+  return [a0, x[0], x[1], x[2], x[3]];
+}
+
+// ── Simulate button ──
+var _lastPanelAero = null;
+document.getElementById('simBtn').addEventListener('click', function() {
+  if (!_lastResults) return;
+  var statusEl = document.getElementById('simStatus');
+  statusEl.textContent = 'Running...';
+  setTimeout(function() {
+    try {
+      var alpha = parseFloat(document.getElementById('in_alpha_deg').value);
+      var panelVinf = parseFloat(document.getElementById('in_panelVinf').value);
+      var maxThickLoc = parseFloat(document.getElementById('in_maxThickLoc').value);
+      var finNacaCoeffs = nacaCoeffsFromMaxThick(maxThickLoc);
+      var inputs = getInputs();
+      var results = window.runBlimpDesign(inputs);
+      _lastPanelAero = window.runPanelAnalysis(
+        { forwardAirSpeed_mps: panelVinf, hullLength_m: results.hullLength_m,
+          thickNessRatio: inputs.thickNessRatio, finPointSpaceing_m: 0.012,
+          nacaCoeffs: finNacaCoeffs },
+        { hullPointArray: results.hullPointArray },
+        { baseCord_m: results.baseCord_m },
+        alpha
+      );
+      drawAero(_lastPanelAero);
+      statusEl.textContent = 'Done (V\u221E=' + fv(panelVinf,1) + ' m/s, \u03B1=' + fv(alpha, 1) + '\u00B0, x\u209C=' + fv(maxThickLoc,2) + 'c)';
+    } catch(e) {
+      statusEl.textContent = 'Error: ' + e.message;
+      console.error('Panel simulation error:', e);
+    }
+  }, 20);
+});
+
+// ── Greyscale colourmap: t in [0,1] -> [r,g,b] 0-255 ──
+// 0 = dark (low pressure / high speed), 1 = bright (high pressure / stagnation)
+function jetColour(t) {
+  var v = Math.max(0, Math.min(255, Math.round(t * 235 + 20)));
+  return [v, v, v];
+}
+
+// ── Point-in-polygon (ray casting) ──
+function pointInsideBody(px, py, Xb, Yb) {
+  var n = Xb.length, inside = false;
+  for (var i = 0, j = n - 1; i < n; j = i++) {
+    if (((Yb[i] > py) !== (Yb[j] > py)) &&
+        (px < (Xb[j] - Xb[i]) * (py - Yb[i]) / (Yb[j] - Yb[i]) + Xb[i]))
+      inside = !inside;
+  }
+  return inside;
+}
+
+// ── Minimum squared distance to any panel midpoint ──
+function minDist2ToBody(px, py, xcP, ycP) {
+  var md = Infinity;
+  for (var k = 0; k < xcP.length; k++) {
+    var d2 = (px - xcP[k]) * (px - xcP[k]) + (py - ycP[k]) * (py - ycP[k]);
+    if (d2 < md) md = d2;
+  }
+  return md;
+}
+
+// ── Compute velocity field on a grid (dpsi/dy, -dpsi/dx via finite diff) ──
+// Body coords already rotated into wind frame: flow is always left-to-right,
+// body is tilted by alpha. Grid is in wind-frame coords.
+function computeFlowField(aero, nxGrid, nyGrid) {
+  var Vinf = aero.Vinf, Gama = aero.Gama;
+  var xcP = aero.xc, ycP = aero.yc;
+  var M = xcP.length;
+  var Xb = aero.Xb, Yb = aero.Yb;
+
+  // Domain bounds
+  var bxMin = Xb[0], bxMax = Xb[0], byMin = Yb[0], byMax = Yb[0];
+  for (var i = 1; i < Xb.length; i++) {
+    if (Xb[i] < bxMin) bxMin = Xb[i]; if (Xb[i] > bxMax) bxMax = Xb[i];
+    if (Yb[i] < byMin) byMin = Yb[i]; if (Yb[i] > byMax) byMax = Yb[i];
+  }
+  var bodyLen = bxMax - bxMin;
+  var pad = bodyLen * 0.6;
+  var xMin = bxMin - pad, xMax = bxMax + pad;
+  var bodyHt = Math.max(Math.abs(byMin), Math.abs(byMax));
+  var yExt = bodyHt + pad;
+  var yMin = -yExt, yMax = yExt;
+
+  // Safe distance (squared) to skip near-body singularities
+  var avgPanelLen = 0;
+  for (var k = 0; k < aero.panelS.length; k++) avgPanelLen += aero.panelS[k];
+  avgPanelLen /= aero.panelS.length;
+  var safeDist2 = avgPanelLen * avgPanelLen * 0.6;
+
+  var dx = (xMax - xMin) / (nxGrid - 1);
+  var dy = (yMax - yMin) / (nyGrid - 1);
+
+  // Compute psi (alpha=0 in wind frame: flow is purely in +x direction)
+  var psi = new Array(nyGrid);
+  for (var jj = 0; jj < nyGrid; jj++) {
+    psi[jj] = new Array(nxGrid);
+    var yy = yMin + jj * dy;
+    for (var ii = 0; ii < nxGrid; ii++) {
+      var xx = xMin + ii * dx;
+      if (pointInsideBody(xx, yy, Xb, Yb) || minDist2ToBody(xx, yy, xcP, ycP) < safeDist2) {
+        psi[jj][ii] = NaN; continue;
+      }
+      var val = Vinf * yy; // freestream in +x direction (alpha=0 in wind frame)
+      for (var k = 0; k < M; k++) {
+        var ddx = xx - xcP[k], ddy = yy - ycP[k];
+        var r2 = ddx * ddx + ddy * ddy;
+        val += (Gama[k] / (2 * Math.PI)) * Math.log(r2);
+      }
+      psi[jj][ii] = val;
+    }
+  }
+
+  // Compute velocity magnitude via finite differences
+  var speed = new Array(nyGrid);
+  var spdMin = Infinity, spdMax = -Infinity;
+  for (var jj = 0; jj < nyGrid; jj++) {
+    speed[jj] = new Array(nxGrid);
+    for (var ii = 0; ii < nxGrid; ii++) {
+      if (isNaN(psi[jj][ii])) { speed[jj][ii] = NaN; continue; }
+      // u = dpsi/dy, v = -dpsi/dx
+      var u, v;
+      if (jj > 0 && jj < nyGrid-1 && !isNaN(psi[jj-1][ii]) && !isNaN(psi[jj+1][ii]))
+        u = (psi[jj+1][ii] - psi[jj-1][ii]) / (2*dy);
+      else u = Vinf;
+      if (ii > 0 && ii < nxGrid-1 && !isNaN(psi[jj][ii-1]) && !isNaN(psi[jj][ii+1]))
+        v = -(psi[jj][ii+1] - psi[jj][ii-1]) / (2*dx);
+      else v = 0;
+      var spd = Math.sqrt(u*u + v*v);
+      speed[jj][ii] = spd;
+      if (spd < spdMin) spdMin = spd;
+      if (spd > spdMax) spdMax = spd;
+    }
+  }
+
+  return { psi: psi, speed: speed, xMin: xMin, xMax: xMax, yMin: yMin, yMax: yMax,
+           nx: nxGrid, ny: nyGrid, dx: dx, dy: dy, spdMin: spdMin, spdMax: spdMax };
+}
+
+// ── Draw flow dots coloured by velocity magnitude ──
+function drawFlowDots(ctx, ff, mapX, mapY, bodyXb, bodyYb) {
+  var psi = ff.psi, speed = ff.speed, nx = ff.nx, ny = ff.ny;
+  var spdRange = ff.spdMax - ff.spdMin + 1e-30;
+  // Sample every other grid point for density
+  var step = 2;
+  for (var jj = 0; jj < ny; jj += step) {
+    for (var ii = 0; ii < nx; ii += step) {
+      if (isNaN(psi[jj][ii])) continue;
+      var spd = speed[jj][ii];
+      if (isNaN(spd)) continue;
+      // Invert: high speed (low pressure) = blue, low speed (high pressure) = red
+      var t = 1 - Math.max(0, Math.min(1, (spd - ff.spdMin) / spdRange));
+      var rgb = jetColour(t);
+      var xx = ff.xMin + ii * ff.dx;
+      var yy = ff.yMin + jj * ff.dy;
+      ctx.fillStyle = 'rgba(' + rgb[0] + ',' + rgb[1] + ',' + rgb[2] + ',0.8)';
+      ctx.fillRect(mapX(xx) - 1, mapY(yy) - 1, 2, 2);
+    }
+  }
+  // Fill body solid to mask interior
+  ctx.fillStyle = '#091a24';
+  ctx.beginPath();
+  for (var i = 0; i < bodyXb.length; i++) {
+    if (i === 0) ctx.moveTo(mapX(bodyXb[i]), mapY(bodyYb[i]));
+    else ctx.lineTo(mapX(bodyXb[i]), mapY(bodyYb[i]));
+  }
+  ctx.closePath(); ctx.fill();
+}
+
+// ── Rotate body coordinates into wind frame ──
+// In wind frame, freestream is +x. Body is rotated by alpha so it appears tilted.
+function rotateToWindFrame(Xb, Yb, alpha_rad) {
+  var cosA = Math.cos(alpha_rad), sinA = Math.sin(alpha_rad);
+  var n = Xb.length;
+  var xr = new Array(n), yr = new Array(n);
+  for (var i = 0; i < n; i++) {
+    xr[i] =  Xb[i] * cosA + Yb[i] * sinA;
+    yr[i] = -Xb[i] * sinA + Yb[i] * cosA;
+  }
+  return { x: xr, y: yr };
+}
+
+// ── Filter Cp outliers ──
+function filterCp(Cp) {
+  var sorted = Cp.slice().sort(function(a,b){ return a - b; });
+  var lo = sorted[Math.floor(sorted.length * 0.02)];
+  var hi = sorted[Math.floor(sorted.length * 0.98)];
+  var pad = (hi - lo) * 0.1;
+  var cMin = lo - pad, cMax = hi + pad;
+  var out = new Array(Cp.length);
+  for (var i = 0; i < Cp.length; i++) out[i] = Math.max(cMin, Math.min(cMax, Cp[i]));
+  return out;
+}
+
+// ── Draw full aero panel for one body ──
+function drawCpPlot(canvasId, aero, title, alpha_deg) {
+  var c = setupCanvas(canvasId), ctx = c.ctx, W = c.W, H = c.H;
+  if (!aero || !aero.Cp || aero.Cp.length === 0) return;
+
+  var chord = aero.chord;
+  var xc = aero.xc;
+  var Cp = filterCp(aero.Cp);
+  var nPts = Cp.length;
+  var alpha_rad = (alpha_deg || 0) * Math.PI / 180;
+
+  // Rotate body and panel midpoints into wind frame
+  var bodyW = rotateToWindFrame(aero.Xb, aero.Yb, alpha_rad);
+  var cptsW = rotateToWindFrame(aero.xc, aero.yc, alpha_rad);
+  var Xb = bodyW.x, Yb = bodyW.y;
+
+  // Build a rotated aero object for the flow field computation
+  var aeroW = {
+    Vinf: aero.Vinf, Gama: aero.Gama, panelS: aero.panelS, chord: chord,
+    Xb: Xb, Yb: Yb, xc: cptsW.x, yc: cptsW.y, alpha_deg: 0
+  };
+
+  // ── Layout ──
+  var divY = Math.round(H * 0.52);
+  var streamTop = 4, streamBot = divY - 4;
+  var plotTop = divY + 6, plotBot = H - 24;
+  var margin = Math.max(28, Math.min(50, W * 0.1)), plotLeft = margin, plotRight = W - Math.max(8, W * 0.03);
+
+  // ── 1. Flow dot visualisation ──
+  var nxG = Math.min(300, Math.round(W * 0.8)), nyG = Math.min(160, Math.round(H * 0.4));
+  var ff = computeFlowField(aeroW, nxG, nyG);
+
+  var sW = plotRight - plotLeft, sH = streamBot - streamTop;
+  var xRange = ff.xMax - ff.xMin, yRange = ff.yMax - ff.yMin;
+  var sScale = Math.min(sW / xRange, sH / yRange);
+  var sCx = (plotLeft + plotRight) / 2 - (ff.xMax + ff.xMin) / 2 * sScale;
+  var sCy = (streamTop + streamBot) / 2 + (ff.yMax + ff.yMin) / 2 * sScale;
+  function mapX(x) { return sCx + x * sScale; }
+  function mapY(y) { return sCy - y * sScale; }
+
+  drawFlowDots(ctx, ff, mapX, mapY, Xb, Yb);
+
+  // Body outline with Cp colour
+  var cpMin = Cp[0], cpMax = Cp[0];
+  for (var i = 1; i < nPts; i++) { if (Cp[i] < cpMin) cpMin = Cp[i]; if (Cp[i] > cpMax) cpMax = Cp[i]; }
+  var cpSpan = cpMax - cpMin + 1e-10;
+  for (var i = 0; i < nPts && i < Xb.length - 1; i++) {
+    var t = (Cp[i] - cpMin) / cpSpan;
+    var rgb = jetColour(t);
+    ctx.strokeStyle = 'rgb(' + rgb[0] + ',' + rgb[1] + ',' + rgb[2] + ')';
+    ctx.lineWidth = 3.5;
+    ctx.beginPath(); ctx.moveTo(mapX(Xb[i]), mapY(Yb[i])); ctx.lineTo(mapX(Xb[i+1]), mapY(Yb[i+1])); ctx.stroke();
+  }
+  // White outline
+  ctx.strokeStyle = 'rgba(255,255,255,0.25)'; ctx.lineWidth = 0.5;
+  ctx.beginPath();
+  for (var i = 0; i < Xb.length; i++) { if (i === 0) ctx.moveTo(mapX(Xb[i]), mapY(Yb[i])); else ctx.lineTo(mapX(Xb[i]), mapY(Yb[i])); }
+  ctx.closePath(); ctx.stroke();
+
+  // ── Coefficient box ──
+  var smallScreen = W < 400;
+  var boxFont = smallScreen ? 10 : 13;
+  var boxLabelFont = smallScreen ? 8 : 10;
+  var boxW = smallScreen ? 95 : 130, boxH = smallScreen ? 44 : 58;
+  var boxX = W - boxW - 6, boxY = smallScreen ? (divY - boxH - 4) : (streamTop + 4);
+  ctx.fillStyle = 'rgba(9,26,36,0.8)';
+  ctx.fillRect(boxX, boxY, boxW, boxH);
+  ctx.strokeStyle = 'rgba(26,58,79,0.6)'; ctx.lineWidth = 1;
+  ctx.strokeRect(boxX, boxY, boxW, boxH);
+  ctx.textAlign = 'left';
+  ctx.fillStyle = '#5a8a9e'; ctx.font = boxLabelFont + 'px -apple-system, sans-serif';
+  ctx.fillText(title, boxX + 6, boxY + 13);
+  ctx.fillStyle = '#dceef6'; ctx.font = 'bold ' + boxFont + 'px -apple-system, sans-serif';
+  ctx.fillText('C\u2097 = ' + aero.Cl.toFixed(4), boxX + 6, boxY + (smallScreen ? 27 : 30));
+  ctx.fillText('C\u2091 = ' + aero.Cd.toFixed(6), boxX + 6, boxY + (smallScreen ? 41 : 46));
+
+  // ── Pressure colour key ──
+  var ckW = 14, ckH = Math.min(80, streamBot - boxY - boxH - 16);
+  var ckX = boxX + 6, ckY = boxY + boxH + 6;
+  if (ckH > 30 && !smallScreen) {
+    // Background panel
+    ctx.fillStyle = 'rgba(9,26,36,0.8)';
+    ctx.fillRect(ckX - 4, ckY - 4, ckW + 52, ckH + 8);
+    ctx.strokeStyle = 'rgba(26,58,79,0.6)'; ctx.lineWidth = 1;
+    ctx.strokeRect(ckX - 4, ckY - 4, ckW + 52, ckH + 8);
+    // Gradient bar
+    for (var ki = 0; ki < ckH; ki++) {
+      var t = ki / ckH;
+      var rgb = jetColour(1 - t);
+      ctx.fillStyle = 'rgb(' + rgb[0] + ',' + rgb[1] + ',' + rgb[2] + ')';
+      ctx.fillRect(ckX, ckY + ki, ckW, 1);
+    }
+    ctx.strokeStyle = 'rgba(255,255,255,0.2)'; ctx.lineWidth = 1;
+    ctx.strokeRect(ckX, ckY, ckW, ckH);
+    // Labels
+    ctx.font = '10px -apple-system, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#dceef6';
+    ctx.fillText('High', ckX + ckW + 5, ckY + 9);
+    ctx.fillText('Low', ckX + ckW + 5, ckY + ckH - 2);
+  }
+
+  // ── Divider ──
+  ctx.strokeStyle = 'rgba(26,58,79,0.6)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(0, divY); ctx.lineTo(W, divY); ctx.stroke();
+
+  // ── 2. Cp distribution plot ──
+  var xNorm = new Array(nPts);
+  for (var i = 0; i < nPts; i++) xNorm[i] = xc[i] / chord;
+
+  var cpPlotMin = cpMin, cpPlotMax = cpMax;
+  cpPlotMin = Math.min(cpPlotMin, -0.5); cpPlotMax = Math.max(cpPlotMax, 1.2);
+  var cpPad = (cpPlotMax - cpPlotMin) * 0.06;
+  cpPlotMin -= cpPad; cpPlotMax += cpPad;
+
+  var pW = plotRight - plotLeft, pH = plotBot - plotTop;
+  function px(xn) { return plotLeft + xn * pW; }
+  function py(cp) { return plotTop + (1 - (cp - cpPlotMin) / (cpPlotMax - cpPlotMin)) * pH; }
+
+  // Grid
+  var gridFont = smallScreen ? 7 : 9;
+  ctx.strokeStyle = 'rgba(26,58,79,0.4)'; ctx.lineWidth = 0.5;
+  ctx.font = gridFont + 'px -apple-system, sans-serif'; ctx.fillStyle = '#5a8a9e';
+  for (var xt = 0; xt <= 1.01; xt += 0.2) {
+    ctx.beginPath(); ctx.moveTo(px(xt), plotTop); ctx.lineTo(px(xt), plotBot); ctx.stroke();
+    ctx.textAlign = 'center'; ctx.fillText(xt.toFixed(1), px(xt), plotBot + 11);
+  }
+  var cpStep = 0.5;
+  for (var cpv = Math.ceil(cpPlotMin / cpStep) * cpStep; cpv <= cpPlotMax; cpv += cpStep) {
+    var yy = py(cpv);
+    if (yy < plotTop || yy > plotBot) continue;
+    ctx.beginPath(); ctx.moveTo(plotLeft, yy); ctx.lineTo(plotRight, yy); ctx.stroke();
+    ctx.textAlign = 'right'; ctx.fillText(cpv.toFixed(1), plotLeft - 4, yy + 3);
+  }
+  // Cp=0 reference
+  ctx.strokeStyle = 'rgba(255,255,255,0.12)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(plotLeft, py(0)); ctx.lineTo(plotRight, py(0)); ctx.stroke();
+
+  // Split panels into first-half and second-half of boundary, then identify
+  // which half is top (more suction) and which is bottom.
+  // The boundary traversal direction differs between hull and fin, so we
+  // cannot rely on the geometric y-coordinate sign alone.
+  var half = Math.floor(nPts / 2);
+  var sumA = 0, sumB = 0;
+  for (var i = 0; i < half; i++) sumA += Cp[i];
+  for (var i = half; i < nPts; i++) sumB += Cp[i];
+  var firstIsTop = (sumA / half) < (sumB / (nPts - half)); // lower avg Cp = more suction = top
+
+  var topX = [], topCp = [], botX = [], botCp = [];
+  for (var i = 0; i < nPts; i++) {
+    var xi = xNorm[i];
+    if (xi < -0.01 || xi > 1.01) continue;
+    var isFirstHalf = (i < half);
+    if (isFirstHalf === firstIsTop) { topX.push(xi); topCp.push(Cp[i]); }
+    else                           { botX.push(xi); botCp.push(Cp[i]); }
+  }
+
+  // Draw top surface — solid blue
+  ctx.strokeStyle = '#7cc4d4'; ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  for (var i = 0; i < topX.length; i++) {
+    if (i === 0) ctx.moveTo(px(topX[i]), py(topCp[i]));
+    else ctx.lineTo(px(topX[i]), py(topCp[i]));
+  }
+  ctx.stroke();
+
+  // Draw bottom surface — dashed soft coral
+  ctx.strokeStyle = '#a0c4b8'; ctx.lineWidth = 1.5;
+  ctx.setLineDash([5, 3]);
+  ctx.beginPath();
+  for (var i = 0; i < botX.length; i++) {
+    if (i === 0) ctx.moveTo(px(botX[i]), py(botCp[i]));
+    else ctx.lineTo(px(botX[i]), py(botCp[i]));
+  }
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Labels near the midpoint of each curve
+  ctx.font = 'bold ' + (smallScreen ? 8 : 10) + 'px -apple-system, sans-serif';
+  if (topX.length > 2) {
+    var ti = Math.floor(topX.length * 0.35);
+    ctx.fillStyle = '#7cc4d4';
+    ctx.textAlign = 'left';
+    ctx.fillText('Top', px(topX[ti]) + 4, py(topCp[ti]) - 6);
+  }
+  if (botX.length > 2) {
+    var bi = Math.floor(botX.length * 0.35);
+    ctx.fillStyle = '#a0c4b8';
+    ctx.textAlign = 'left';
+    ctx.fillText('Bottom', px(botX[bi]) + 4, py(botCp[bi]) + 14);
+  }
+
+  // Axis labels
+  ctx.fillStyle = '#5a8a9e'; ctx.font = (smallScreen ? 8 : 10) + 'px -apple-system, sans-serif';
+  ctx.textAlign = 'center'; ctx.fillText('x / chord', (plotLeft + plotRight) / 2, H - 2);
+  ctx.save(); ctx.translate(smallScreen ? 8 : 14, (plotTop + plotBot) / 2); ctx.rotate(-Math.PI / 2);
+  ctx.fillText('Cp', 0, 0); ctx.restore();
+}
+
+function drawAero(aeroResult) {
+  if (!aeroResult) return;
+  var alpha = aeroResult.alpha_deg || 0;
+  drawCpPlot('cvAeroHull', aeroResult.hull, 'Hull', alpha);
+  drawCpPlot('cvAeroFin', aeroResult.fin, 'Fin', alpha);
+}
+
+// ── Update everything ──
+var _lastResults = null;
+
+function redraw(r, forceAero) {
+  if (currentMode === 'engineering') { drawSide(r); drawTop(r); drawRear(r); }
+  else if (currentMode === '3d') { draw3d(r); }
+  // Only redraw aero when explicitly requested (tab switch), not on every slider change
+  else if (currentMode === 'aero' && forceAero && _lastPanelAero) { drawAero(_lastPanelAero); }
+}
+
+function updateAll(r) {
+  _lastResults = r;
+  redraw(r);
+
+  document.getElementById('hdr_chord').textContent = fv(r.baseCord_m, 3);
+  document.getElementById('hdr_lift').textContent = fv(r.netLift_N, 1);
+  document.getElementById('hdr_mass').textContent = fv(r.totalMass_kg, 2);
+  document.getElementById('hdr_excess').textContent = fv(r.excessLift_N, 1);
+  var pill = document.getElementById('hdr_status');
+  if (r.excessLift_N > 0) { pill.textContent = 'Floats'; pill.className = 'status-pill status-floats'; }
+  else { pill.textContent = 'Sinks'; pill.className = 'status-pill status-sinks'; }
+
+  dataRows('colGeom', [
+    ['Hull (L x D)', fv(r.hullLength_m) + ' x ' + fv(r.hullRadius_m * 2) + ' m'],
+    ['Volume', fv(r.hullVolume_m3) + ' m\u00B3'],
+    ['CV (x)', fv(r.centerOfVolume_m, 3) + ' m'],
+    '---',
+    ['Fins', r.numbFins + ' x ' + fv(r.baseCord_m, 3) + ' m chord'],
+    ['Fin area req.', fv(r.requiredArea_m2, 3) + ' m\u00B2'],
+    ['Fin vol. (ea.)', fv(r.singleFinVolume_m3, 4) + ' m\u00B3'],
+    '---',
+    ['Air density', fv(r.airDensity_kgpm3, 4) + ' kg/m\u00B3'],
+    ['Gas density', fv(r.gasDensity_kgpm3, 4) + ' kg/m\u00B3']
+  ]);
+
+  var massRows = [
+    ['Hull skin', fv(r.hullTotalMass_kg, 2) + ' kg'],
+    ['Fin (each)', fv(r.singleFinMass_kg, 3) + ' kg'],
+    ['Fins total', fv(r.singleFinMass_kg * r.numbFins, 3) + ' kg']
+  ];
+  if (r.ballastMass_kg > 0) {
+    massRows.push('---');
+    massRows.push(['Ballast', fv(r.ballastMass_kg, 3) + ' kg', 'warn']);
+    massRows.push(['  option', r.ballastOption]);
+    massRows.push(['  position', r.ballastPos_m.map(function(v){return fv(v,2);}).join(', ') + ' m']);
+  }
+  massRows.push('---');
+  massRows.push(['Total mass', fv(r.totalMass_kg, 2) + ' kg', 'accent']);
+  dataRows('colMass', massRows);
+
+  dataRows('colBuoy', [
+    ['Gross buoyancy', fv(r.buoyancyForce_N, 1) + ' N'],
+    ['Gas weight', fv(r.gasWeight_N, 1) + ' N'],
+    ['Net lift', fv(r.netLift_N, 1) + ' N', 'accent'],
+    '---',
+    ['Structure wt', fv(r.totalWeight_N, 1) + ' N'],
+    ['Excess lift', fv(r.excessLift_N, 1) + ' N', r.excessLift_N >= 0 ? 'positive' : 'negative'],
+    '---',
+    ['Gas', r.liftingGas],
+    ['Alt.', fv(r.altitude_m, 0) + ' m'],
+    ['Temp.', fv(r.temperature_K, 1) + ' K']
+  ]);
+
+  dataRows('colStab', [
+    ['CG (x,y,z)', r.centerOfGravity_m.map(function(v){return fv(v,3);}).join(', ')],
+    ['CV (x)', fv(r.centerOfVolume_m, 3) + ' m'],
+    '---',
+    ['Static margin', fv(r.staticMargin_m, 4) + ' m', Math.abs(r.staticMargin_m) < 0.01 ? 'positive' : ''],
+    ['Pitch moment', fv(r.staticMoment_Nm, 3) + ' Nm']
+  ]);
+
+  dataRows('colInertia', [
+    ['Ixx (roll)', fv(r.inertiaRotCg_kgm2[0][0], 2) + ' kg.m\u00B2'],
+    ['Iyy (pitch)', fv(r.inertiaRotCg_kgm2[1][1], 2) + ' kg.m\u00B2'],
+    ['Izz (yaw)', fv(r.inertiaRotCg_kgm2[2][2], 2) + ' kg.m\u00B2'],
+    '---',
+    ['k1 (axial)', fv(r.k1, 4)],
+    ['k2 (lateral)', fv(r.k2, 4)],
+    ["k' (pitch)", fv(r.kPrime, 4)]
+  ]);
+}
+
+// ── Calculate ──
+function calculate() {
+  try {
+    syncSliderValues();
+    var inputs = getInputs();
+    var results = window.runBlimpDesign(inputs);
+    updateAll(results);
+  } catch (e) { console.warn('Calc skipped:', e.message); }
+}
+
+// ── Live recalculation ──
+var _t = null;
+function sched() { clearTimeout(_t); _t = setTimeout(calculate, 50); }
+document.querySelectorAll('.sidebar input, .sidebar select').forEach(function(el) {
+  el.addEventListener('input', sched);
+  el.addEventListener('change', sched);
+});
+window.addEventListener('load', function() { setTimeout(calculate, 60); });
+window.addEventListener('resize', function() { clearTimeout(window._rt); window._rt = setTimeout(calculate, 100); });
+
+// ── Mobile sidebar toggle ──
+(function() {
+  var btn = document.getElementById('sidebarToggle');
+  var sb = document.querySelector('.sidebar');
+  var ov = document.getElementById('sidebarOverlay');
+  function toggle() { sb.classList.toggle('open'); ov.classList.toggle('visible'); }
+  function close() { sb.classList.remove('open'); ov.classList.remove('visible'); }
+  btn.addEventListener('click', toggle);
+  ov.addEventListener('click', close);
+  // Close sidebar when an input changes (user made their selection)
+  sb.addEventListener('change', function() { if (window.innerWidth <= 900) close(); });
+})();
+</script>
+</body>
+</html>
